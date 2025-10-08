@@ -1,23 +1,68 @@
 name: Automatisation des tests DevSecOps
-on: push
+
+on: 
+  push:
+
 jobs:
   Dependances:
+    name: 🔍 Vérification des dépendances
     runs-on: ubuntu-latest
+
     steps:
-      - name: Dependances
+      - name: Checkout du code source
+        uses: actions/checkout@v4
+
+      - name: Vérification du fichier requirements.txt
         run: |
-          echo "ecrire ici le scrypt de contrôle des dépendances"
+          if [ ! -f "requirements.txt" ]; then
+            echo "❌ Le fichier requirements.txt est manquant."
+            exit 1
+          fi
+          echo "✅ Fichier requirements.txt trouvé."
+
+      - name: Contrôle des dépendances Python
+        run: |
+          echo "📦 Installation des dépendances pour vérification..."
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt || { echo "❌ Erreur dans les dépendances."; exit 1; }
+          echo "✅ Les dépendances sont valides."
+
   Dockerfile:
+    name: 🐳 Vérification du Dockerfile
     runs-on: ubuntu-latest
-    needs: Dependances
+    needs: Dependances  # Ce job ne démarre que si 'Dependances' est OK
+
     steps:
-      - name: Test Dockerfile
+      - name: Checkout du code source
+        uses: actions/checkout@v4
+
+      - name: Vérification de la présence du Dockerfile
         run: |
-          echo "ecrire ici le scrypt de contrôle du Dockerfile"
+          if [ ! -f "Dockerfile" ]; then
+            echo "❌ Dockerfile manquant."
+            exit 1
+          fi
+          echo "✅ Dockerfile trouvé."
+
+      - name: Analyse du Dockerfile avec Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
+      - name: Test de build du Dockerfile
+        run: |
+          echo "🚧 Test de build du Dockerfile..."
+          docker build -t test-image:latest . || { echo "❌ Erreur lors du build du Dockerfile."; exit 1; }
+          echo "✅ Le Dockerfile est valide et le build fonctionne."
+
   Deploy:
+    name: 🚀 Déploiement (simulation)
     runs-on: ubuntu-latest
     needs: Dockerfile
+
     steps:
-      - name: Deploy
+      - name: Déploiement
         run: |
-          echo "Rien à faire ici. Votre application est prête à être déployée"
+          echo "✅ Rien à faire ici. Votre application est prête à être déployée."
